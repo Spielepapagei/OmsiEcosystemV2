@@ -1,0 +1,15 @@
+﻿{
+  "OmsiApi": {
+    "AppUrl": "",
+    "Database": {
+      "Host": "",
+      "Port": 3306,
+      "Database": "omsiapi",
+      "Username": "omsiapi",
+      "Password": "ChangeME"
+    },
+    "Security":{
+      "token": "Use a Long Random String at least 32 Characters!!!"
+    }
+  }
+}

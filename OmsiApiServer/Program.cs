@@ -1,20 +1,14 @@
 using System.Text;
-using OmsiApiClient.App.Services;
-using Spectre.Console;
+using OmsiApiServer.App.Services;
 
-namespace OmsiApiClient;
+namespace OmsiApiServer;
 
 public class Program
 {
-    public static readonly Rule AppRule = new Rule("[orange3]OmsiApiClient[/]")
-        .LeftJustified()
-        .RuleStyle("silver dim");
     public static async Task Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
         Console.InputEncoding = Encoding.UTF8;
-        
-        AnsiConsole.Write(AppRule);
         
         var builder = WebApplication.CreateBuilder(args);
         
@@ -23,7 +17,7 @@ public class Program
         builder.Services.AddSwaggerGen();
         
         //Services
-        builder.Services.AddSingleton<SessionManager>();
+        builder.Services.AddSingleton<SessionManagerService>();
         
         //create builder
         var app = builder.Build();
@@ -33,9 +27,6 @@ public class Program
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-        
-        //Background Services
-        _ = app.Services.GetRequiredService<SessionManager>();
         
         //Start app
         app.UseHttpsRedirection();

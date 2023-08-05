@@ -8,13 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Logging.Net" Version="1.1.4" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0-preview.6.23329.4">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="OmsiHook" Version="2.1.0" />
-        <PackageReference Include="Spectre.Console" Version="0.47.0" />
+        <PackageReference Include="MySqlBackup.NET" Version="2.3.8" />
+        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3"/>
     </ItemGroup>
 
@@ -25,7 +25,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="App\Controllers\" />
+      <Folder Include="App\Database\Mirgrations\" />
+      <Folder Include="App\Database\Models\" />
     </ItemGroup>
 
 </Project>
