@@ -4,6 +4,7 @@ using DiscordLogging.App.Services;
 using Logging.Net;
 using Microsoft.EntityFrameworkCore;
 using MySql.Data.MySqlClient;
+using OmsiApiServer.App.Database;
 
 namespace OmsiApiServer.App.Services;
 
@@ -28,7 +29,7 @@ public class DatabaseCheckupService
             Logger.Fatal("Unable to connect to mysql database");
             Logger.Fatal("Please make sure the configuration is correct");
             Logger.Fatal("");
-            Logger.Fatal("DiscordLogging will wait 1 minute, then exit");
+            Logger.Fatal("OmsiApiServer will wait 1 minute, then exit");
             Logger.Fatal("-----------------------------------------------");
             
             Thread.Sleep(TimeSpan.FromMinutes(1));

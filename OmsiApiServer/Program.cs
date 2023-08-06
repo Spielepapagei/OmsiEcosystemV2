@@ -1,5 +1,6 @@
-using System.Text;
+using OmsiApiServer.App.Database;
 using OmsiApiServer.App.Services;
+using Spectre.Console;
 
 namespace OmsiApiServer;
 
@@ -7,19 +8,51 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        Console.OutputEncoding = Encoding.UTF8;
-        Console.InputEncoding = Encoding.UTF8;
+        //Logger.UsedLogger = new CacheLogger();
+        
+        //TODO: Overall Logging
+        
+        var path = new TextPath(Directory.GetCurrentDirectory());
+
+        path.RootStyle = new Style(foreground: Color.Blue);
+        path.SeparatorStyle = new Style(foreground: Color.Blue);
+        path.StemStyle = new Style(foreground: Color.Green);
+        path.LeafStyle = new Style(foreground: Color.Green);
+        
+        AnsiConsole.Markup($"[green]Working dir[/]: ");
+        AnsiConsole.Write(path);
+
+        AnsiConsole.MarkupLine("[orange3]Running pre-init tasks[/]");
+
+        // This will also copy all default config files
+        var configService = new ConfigService(new StorageService());
+        var databaseCheckupService = new DatabaseCheckupService(configService);
+
+        await databaseCheckupService.Perform();
+        
         
         var builder = WebApplication.CreateBuilder(args);
-        
+
+        // Add services to the container.
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         
-        //Services
-        builder.Services.AddSingleton<SessionManagerService>();
+        // Databases
+        builder.Services.AddDbContext<DataContext>();
         
-        //create builder
+        // Repositories
+        builder.Services.AddScoped(typeof(Repository<>));
+        
+        // Services
+        builder.Services.AddSingleton<ConfigService>();
+        builder.Services.AddSingleton<StorageService>();
+        builder.Services.AddSingleton<DateTimeService>();
+        
+        
+        // Background services
+        
+
         var app = builder.Build();
         
         if (app.Environment.IsDevelopment())
@@ -28,10 +61,14 @@ public class Program
             app.UseSwaggerUI();
         }
         
-        //Start app
         app.UseHttpsRedirection();
+        
         app.UseAuthorization();
+        
         app.MapControllers();
+        
+        //AutoStartServices
+        //_ = app.Services.GetRequiredService<DiscordBotService>();
         
         await app.RunAsync();
     }

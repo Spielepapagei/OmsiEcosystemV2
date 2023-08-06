@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace DiscordLogging.App.Database;
+namespace OmsiApiServer.App.Database;
 
 public class Repository<TEntity> where TEntity : class
 {

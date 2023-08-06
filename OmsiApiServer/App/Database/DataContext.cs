@@ -1,8 +1,8 @@
-﻿
+﻿using DiscordLogging.App.Database.Models;
 using Microsoft.EntityFrameworkCore;
 using OmsiApiServer.App.Services;
 
-namespace DiscordLogging.App.Database;
+namespace OmsiApiServer.App.Database;
 
 public class DataContext : DbContext
 {
@@ -14,7 +14,7 @@ public class DataContext : DbContext
     }
     
     //Data Context
-    //public DbSet<IpIndex> IpIndex { get; set; }
+    public DbSet<User> User { get; set; }
     
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

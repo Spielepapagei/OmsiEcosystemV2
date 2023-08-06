@@ -1,4 +1,6 @@
-﻿namespace DiscordLogging.App.Services;
+﻿using DiscordLogging.App.Services;
+
+namespace OmsiApiServer.App.Services;
 
 public class StorageService
 {
@@ -9,9 +11,7 @@ public class StorageService
     
     public void EnsureCreated()
     {
-        Directory.CreateDirectory(PathBuilder.Dir("storage", "uploads"));
         Directory.CreateDirectory(PathBuilder.Dir("storage", "configs"));
-        Directory.CreateDirectory(PathBuilder.Dir("storage", "resources"));
-        Directory.CreateDirectory(PathBuilder.Dir("storage", "backups"));
+        Directory.CreateDirectory(PathBuilder.Dir("storage", "backup"));
     }
 }
