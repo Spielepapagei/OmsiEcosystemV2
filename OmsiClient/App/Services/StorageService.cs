@@ -1,7 +1,7 @@
-﻿using OmsiApiServer.App.Helpers;
+﻿using OmsiClient.App.Helpers;
 using Spectre.Console;
 
-namespace OmsiApiServer.App.Services;
+namespace OmsiClient.App.Services;
 
 public class StorageService
 {

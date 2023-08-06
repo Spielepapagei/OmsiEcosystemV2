@@ -1,8 +1,9 @@
 using System.Text;
-using OmsiApiClient.App.Services;
+using OmsiClient.App.Services;
+using OmsiClient.App.Services.Configuration;
 using Spectre.Console;
 
-namespace OmsiApiClient;
+namespace OmsiClient;
 
 public class Program
 {
@@ -16,31 +17,20 @@ public class Program
         
         AnsiConsole.Write(AppRule);
         
+        //var configService = new ConfigService(new StorageService());
+        
         var builder = WebApplication.CreateBuilder(args);
         
-        builder.Services.AddControllers();
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
-        
         //Services
+        builder.Services.AddSingleton<ConfigService>();
+        builder.Services.AddSingleton<StorageService>();
         builder.Services.AddSingleton<SessionManager>();
         
         //create builder
         var app = builder.Build();
         
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-        
         //Background Services
         _ = app.Services.GetRequiredService<SessionManager>();
-        
-        //Start app
-        app.UseHttpsRedirection();
-        app.UseAuthorization();
-        app.MapControllers();
         
         await app.RunAsync();
     }

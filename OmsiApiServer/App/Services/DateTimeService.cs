@@ -1,4 +1,4 @@
-﻿using DiscordLogging.App.Helpers;
+﻿using OmsiApiServer.App.Helpers;
 
 namespace OmsiApiServer.App.Services;
 

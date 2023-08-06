@@ -1,4 +1,4 @@
-﻿namespace OmsiApiServer.App.Models;
+﻿namespace OmsiApiServer.App.Dtos.User;
 
 public class UserRegisterDto
 {

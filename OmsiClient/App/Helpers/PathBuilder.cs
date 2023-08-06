@@ -1,4 +1,4 @@
-﻿namespace OmsiApiServer.App.Helpers;
+﻿namespace OmsiClient.App.Helpers;
 
 public class PathBuilder
 {

@@ -1,12 +1,12 @@
 ﻿{
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "OmsiApiClient": {
+    "OmsiClient": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,
       "launchUrl": "swagger",
-      "applicationUrl": "https://localhost:7189;http://localhost:5067",
+      "applicationUrl": "https://localhost:7041;http://localhost:5285",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

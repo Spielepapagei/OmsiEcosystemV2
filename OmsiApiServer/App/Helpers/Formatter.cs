@@ -1,4 +1,4 @@
-﻿namespace DiscordLogging.App.Helpers;
+﻿namespace OmsiApiServer.App.Helpers;
 
 public static class Formatter
 {

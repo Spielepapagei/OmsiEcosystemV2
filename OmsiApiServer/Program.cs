@@ -1,6 +1,13 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OmsiApiServer.App.Database;
 using OmsiApiServer.App.Services;
+using OmsiApiServer.App.Services.Auth;
+using OmsiApiServer.App.Services.Configuration;
 using Spectre.Console;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace OmsiApiServer;
 
@@ -36,7 +43,32 @@ public class Program
         // Add services to the container.
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+        builder.Services.AddSwaggerGen(x =>
+        {
+            x.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme()
+            {
+                Description = "Standard Authorization header using the Bearer scheme, e.g \"bearer {token} \"",
+                In = ParameterLocation.Header,
+                Name = "Authorization",
+                Type = SecuritySchemeType.ApiKey
+            });
+            
+            x.OperationFilter<SecurityRequirementsOperationFilter>();
+        });
+        
+        //Jwt
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8
+                        .GetBytes(configService.Get().OmsiClient.Security.Secret)),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
+            });
         
         // Databases
         builder.Services.AddDbContext<DataContext>();
@@ -48,6 +80,8 @@ public class Program
         builder.Services.AddSingleton<ConfigService>();
         builder.Services.AddSingleton<StorageService>();
         builder.Services.AddSingleton<DateTimeService>();
+        builder.Services.AddScoped<IdentityService>();
+        builder.Services.AddScoped<SessionManagerService>();
         
         
         // Background services
@@ -62,9 +96,8 @@ public class Program
         }
         
         app.UseHttpsRedirection();
-        
+        app.UseAuthentication();
         app.UseAuthorization();
-        
         app.MapControllers();
         
         //AutoStartServices

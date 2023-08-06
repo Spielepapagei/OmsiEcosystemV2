@@ -8,12 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.5">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
+        <PackageReference Include="Flurl.Http" Version="3.2.4" />
+        <PackageReference Include="Logging.Net" Version="1.1.4" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="OmsiHook" Version="2.1.0" />
         <PackageReference Include="Spectre.Console" Version="0.47.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3"/>
     </ItemGroup>
@@ -24,8 +21,14 @@
       </Content>
     </ItemGroup>
 
+
     <ItemGroup>
-      <Folder Include="App\Controllers\" />
+      <Folder Include="App\Models\" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="defaultstorage\configs\config.json" />
     </ItemGroup>
 
 </Project>
