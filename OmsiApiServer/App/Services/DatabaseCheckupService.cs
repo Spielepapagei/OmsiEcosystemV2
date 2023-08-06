@@ -68,7 +68,7 @@ public class DatabaseCheckupService
         var dateTimeService = new DateTimeService();
 
         var config = configService
-            .GetSection("DiscordLogging")
+            .GetSection("OmsiApi")
             .GetSection("Database");
 
         var connectionString = $"host={config.GetValue<string>("Host")};" +

@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using DiscordLogging.App.Services;
-using Logging.Net;
 using Microsoft.Extensions.Primitives;
+using Spectre.Console;
 
 namespace OmsiApiServer.App.Services;
 
@@ -27,12 +27,20 @@ public class ConfigService : IConfiguration
             DebugMode = bool.Parse(debugVar);
 
         if (DebugMode)
-            Logger.Debug("Debug mode enabled");
+            AnsiConsole.MarkupLine("[orange3]Debug mode enabled[/]");
     }
 
     public void Reload()
     {
-        Logger.Info($"Reading config from '{PathBuilder.File("storage", "configs", "config.json")}'");
+        var path = new TextPath(PathBuilder.File("storage", "configs", "config.json"));
+
+        path.RootStyle = new Style(foreground: Color.Blue);
+        path.SeparatorStyle = new Style(foreground: Color.Blue);
+        path.StemStyle = new Style(foreground: Color.Green);
+        path.LeafStyle = new Style(foreground: Color.Green);
+        
+        AnsiConsole.Markup($"[green]Reading config from[/]: ");
+        AnsiConsole.Write(path);
         
         Configuration = new ConfigurationBuilder().AddJsonStream(
             new MemoryStream(Encoding.ASCII.GetBytes(
@@ -42,7 +50,7 @@ public class ConfigService : IConfiguration
                 )
             )).Build();
 
-        Logger.Info("Reloaded configuration file");
+        AnsiConsole.MarkupLine("[green]Reloaded configuration file.[/]");
     }
 
     public IEnumerable<IConfigurationSection> GetChildren()
