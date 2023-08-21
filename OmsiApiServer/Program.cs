@@ -18,6 +18,8 @@ public class Program
         //Logger.UsedLogger = new CacheLogger();
         
         //TODO: Overall Logging
+        Console.OutputEncoding = Encoding.UTF8;
+        Console.InputEncoding = Encoding.UTF8;
         
         var path = new TextPath(Directory.GetCurrentDirectory());
 
@@ -82,7 +84,6 @@ public class Program
         builder.Services.AddSingleton<DateTimeService>();
         builder.Services.AddScoped<IdentityService>();
         builder.Services.AddScoped<SessionManagerService>();
-        
         
         // Background services
         

@@ -1,30 +1,36 @@
 ﻿using Flurl;
 using Flurl.Http;
 using OmsiApiServer.App.Dtos;
+using OmsiClient.App.Helpers;
 using OmsiClient.App.Services.Configuration;
+using OmsiClient.App.Services.UI;
 using Spectre.Console;
 
 namespace OmsiClient.App.Services;
 
 public class SessionManager
 {
-    private ConfigService Config;
-    private readonly string AppUrl;
+    private readonly ConfigService Config;
+    private string? AppUrl;
     private string Token;
     private ConfigV1 ConfigModel;
+    private readonly PingHelper PingHelper;
+    private readonly MainMenuService MainMenu;
     
-    public SessionManager(ConfigService config)
+    public SessionManager(ConfigService config, PingHelper pingHelper, MainMenuService mainMenu)
     {
         ConfigModel = config.Get();
 
         Config = config;
-        
+        PingHelper = pingHelper;
+        MainMenu = mainMenu;
+
         AppUrl = config.Get().OmsiClient.AppUrl;
         Token = config.Get().OmsiClient.AuthData.Token;
             
-        Task.Run(LoginPage);
+        //Task.Run(LoginPage);
     }
-
+    
     private async Task LoginPage()
     {
         AnsiConsole.Console.Clear();
@@ -33,68 +39,106 @@ public class SessionManager
         AnsiConsole.Write(rule);
         AnsiConsole.MarkupLine("");
         
-        if (AppUrl == string.Empty)
+        while (AppUrl is null)
         {
-            AnsiConsole.MarkupLine("[red]AppUrl is Empty[/]");
-            AnsiConsole.MarkupLine("");
+            await SetAppUrl();
         }
+        
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("green"))
+            .StartAsync("Testing Connection.", async ctx =>
+            {
+                await PingHelper.PingIp(AppUrl);
+            });
 
         ServiceResponse<string> i = new ServiceResponse<string>();
         
-        while (true)
+        var checkToken = await CheckToken();
+            
+        if (checkToken is { Success: true })
         {
-            var checkToken = await CheckToken();
-
-            if (checkToken is { Success: true })
-            {
-                i = checkToken;
-                break;
-            }
-            
-            AnsiConsole.MarkupLine("This is the [green]Login[/]. You have no Login? Then please ask a [red]Administrator[/].");
-            AnsiConsole.MarkupLine("[grey19]With Logging in you Accept the Terms of Service and Data privacy policy.[/]");
-            AnsiConsole.MarkupLine("");
-            
-            var username = AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter [green]username[/]?")
-                    .PromptStyle("gray"));
+            i = checkToken;
+        }
         
-            var password = AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter [green]password[/]?")
-                    .PromptStyle("red")
-                    .Secret());
-        
-            try
+        while (!checkToken.Success)
+        {
+            var response = await LogIn(rule);
+            
+            if (response.Success)
             {
-                var response = await AppUrl
-                    .AppendPathSegment("api/auth/login")
-                    .PostJsonAsync(new
-                    {
-                        username = username,
-                        password = password
-                    })
-                    .ReceiveJson<ServiceResponse<string>>();
-
-                if (response != null && response.Data != null)
+                checkToken = await CheckToken();
+            
+                if (checkToken is { Success: true })
                 {
-                    Token = response.Data;
-                    ConfigModel.OmsiClient.AuthData.Token = response.Data;
-                    Config.Save(ConfigModel);
+                    i = checkToken;
+                    break;
                 }
-            
-                //AnsiConsole.MarkupLine($"[blue]{response.Data}[/]");
-            }
-            catch (Exception e)
-            {
-                AnsiConsole.Write(e.Message + e.InnerException);
-                throw;
             }
         }
         
+        
+        
         AnsiConsole.MarkupLine("");
         AnsiConsole.MarkupLine($"Logged In [green]Successful[/] as [green]{i.Data}[/]");
+        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+
+        i.Data ??= "Undefined";
+        MainMenu.StartUi(i.Data);
     }
 
+    private async Task<ServiceResponse<string>> LogIn(Rule rule)
+    {
+        AnsiConsole.Console.Clear();
+        AnsiConsole.Write(rule);
+        AnsiConsole.MarkupLine("");
+        AnsiConsole.MarkupLine("This is the [green]Login[/]. You have no Login? Then please ask a [red]Administrator[/].");
+        AnsiConsole.MarkupLine("[grey19]With Logging in you Accept the Terms of Service and Data privacy policy.[/]");
+        AnsiConsole.MarkupLine("");
+            
+        var username = AnsiConsole.Prompt(
+            new TextPrompt<string>("Enter [green]username[/]?")
+                .PromptStyle("gray"));
+        
+        var password = AnsiConsole.Prompt(
+            new TextPrompt<string>("Enter [green]password[/]?")
+                .PromptStyle("red")
+                .Secret());
+        
+        try
+        {
+            var response = await AppUrl
+                .AppendPathSegment("/api/auth/login")
+                .PostJsonAsync(new
+                {
+                    username = username,
+                    password = password
+                })
+                .ReceiveJson<ServiceResponse<string>>();
+
+            if (response is { Data: not null })
+            {
+                Token = response.Data;
+                ConfigModel.OmsiClient.AuthData.Token = response.Data;
+                Config.Save(ConfigModel);
+                ConfigModel = Config.Get();
+                return response;
+            }
+                
+        }
+        catch (FlurlHttpException  e)
+        {
+            AnsiConsole.MarkupLine("");
+            AnsiConsole.MarkupLine($"Api Call Error StatusCode: [red]{e.StatusCode ?? 404}[/]");
+            await Task.Delay(TimeSpan.FromMilliseconds(3000));
+        }
+
+        return new ServiceResponse<string>()
+        {
+            Success = false
+        };
+    }
+    
     private async Task<ServiceResponse<string>> CheckToken()
     {
         var response = new ServiceResponse<string>
@@ -104,20 +148,38 @@ public class SessionManager
         
         try
         {
-            AnsiConsole.MarkupLine("[green]Try Logging in...[/]");
-            var check = await AppUrl.AppendPathSegment("api/auth/check").WithOAuthBearerToken(Token).GetJsonAsync<ServiceResponse<string>>();
+            AnsiConsole.MarkupLine("[green]Success[/] Checking Token");
+            var check = await AppUrl.AppendPathSegment("/api/auth/check").WithOAuthBearerToken(Token).GetJsonAsync<ServiceResponse<string>>();
             response.Data = check.Data;
             response.Success = check.Success;
             response.Message = check.Message;
             
             return response;
         }
-        catch (Exception e)
+        catch (FlurlHttpException e)
         {
-            AnsiConsole.Write(e.Message + e.InnerException);
             AnsiConsole.MarkupLine("");
+            AnsiConsole.MarkupLine($"Api Call Error StatusCode: [red]{e.StatusCode ?? 404}[/]");
+            await Task.Delay(TimeSpan.FromMilliseconds(3000));
         }
 
         return response;
+    }
+
+    private Task SetAppUrl()
+    {
+        AnsiConsole.MarkupLine("[red]AppUrl is Empty[/]");
+        AnsiConsole.MarkupLine("");
+            
+        var appUrl = AnsiConsole.Prompt(
+            new TextPrompt<string>("Enter an [blue]AppUrl[/]?")
+                .PromptStyle("blue"));
+
+        AppUrl = appUrl;
+        ConfigModel.OmsiClient.AppUrl = appUrl;
+        Config.Save(ConfigModel);
+        ConfigModel = Config.Get();
+        
+        return Task.CompletedTask;
     }
 }

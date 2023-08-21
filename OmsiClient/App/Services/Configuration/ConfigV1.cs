@@ -11,7 +11,11 @@ public class ConfigV1
     {
         [JsonProperty("AppUrl")]
         [Description("The url to Connect to The Server")]
-        public string AppUrl { get; set; } = "https://localhost:7223/";
+        public string? AppUrl { get; set; }
+        
+        [JsonProperty("Version")]
+        [Description("Do not Edit used by the Apllication")]
+        public string Version { get; set; } = "1.0.0";
 
         [JsonProperty("AuthData")] public AuthData AuthData { get; set; } = new();
     }

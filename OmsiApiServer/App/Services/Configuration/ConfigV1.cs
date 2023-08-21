@@ -13,7 +13,11 @@ public class ConfigV1
     {
         [JsonProperty("AppUrl")]
         [Description("The url OmsiApiServer is accesible with from the internet")]
-        public string AppUrl { get; set; } = "https://localhost:7223/";
+        public string? AppUrl { get; set; }
+
+        [JsonProperty("Version")]
+        [Description("Do not Edit used by the Apllication")]
+        public string Version { get; set; } = "1.0.0";
 
         [JsonProperty("Security")] public Security Security { get; set; } = new();
         

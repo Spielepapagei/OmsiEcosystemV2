@@ -1,8 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OmsiApiServer", "OmsiApiServer\OmsiApiServer.csproj", "{6BB45C66-DC5B-4640-A116-CB9EA4A72AAD}"
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34003.232
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OmsiApiServer", "OmsiApiServer\OmsiApiServer.csproj", "{6BB45C66-DC5B-4640-A116-CB9EA4A72AAD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OmsiClient", "OmsiClient\OmsiClient.csproj", "{D9116E54-6CBC-4012-B679-59BBDE84C545}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OmsiClient", "OmsiClient\OmsiClient.csproj", "{D9116E54-6CBC-4012-B679-59BBDE84C545}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +21,11 @@ Global
 		{D9116E54-6CBC-4012-B679-59BBDE84C545}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9116E54-6CBC-4012-B679-59BBDE84C545}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9116E54-6CBC-4012-B679-59BBDE84C545}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F764D016-4A16-4C41-82C0-D7DCA51ED2FE}
 	EndGlobalSection
 EndGlobal

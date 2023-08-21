@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using OmsiApiServer.App.Database;
 using OmsiApiServer.App.Database.Models;
 using OmsiApiServer.App.Dtos;

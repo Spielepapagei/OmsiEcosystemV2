@@ -1,11 +1,13 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
+using System.Net.NetworkInformation;
 using Logging.Net;
 using Microsoft.EntityFrameworkCore;
 using MySql.Data.MySqlClient;
 using OmsiApiServer.App.Database;
 using OmsiApiServer.App.Helpers;
 using OmsiApiServer.App.Services.Configuration;
+using Spectre.Console;
 
 namespace OmsiApiServer.App.Services;
 
@@ -20,119 +22,153 @@ public class DatabaseCheckupService
 
     public async Task Perform()
     {
-        var context = new DataContext(ConfigService);
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("green"))
+            .StartAsync("Testing Connection.", async ctx =>
+            {
+                
+                var pingReply = await PingIp(ConfigService.Get().OmsiClient.Database.Host);
+                if (pingReply is not { Status: IPStatus.Success })
+                {
+                    ctx.Status("Exiting OmsiApi will wait 1 minute, then exit");
+                    await Task.Run(AppExit);
+                }
+                
+                AnsiConsole.MarkupLine("[green]Checked[/] Connection to Host.");
+                
+                var context = new DataContext(ConfigService);
 
-        Logger.Info("Checking database");
+                ctx.Status("[green]Checking[/] database");
+                ctx.Refresh();
         
-        if (!await context.Database.CanConnectAsync())
-        {
-            Logger.Fatal("-----------------------------------------------");
-            Logger.Fatal("Unable to connect to mysql database");
-            Logger.Fatal("Please make sure the configuration is correct");
-            Logger.Fatal("");
-            Logger.Fatal("OmsiApiServer will wait 1 minute, then exit");
-            Logger.Fatal("-----------------------------------------------");
+                if (!await context.Database.CanConnectAsync())
+                {
+                    ctx.Status("Exiting OmsiApi will wait 1 minute, then exit");
+                    await Task.Run(AppExit);
+                }
+                
+                AnsiConsole.MarkupLine("[green]Checked[/] database connection.");
+                
+                ctx.Status("Checking for pending migrations");
+                ctx.Refresh();
+                
+                var migrations = (await context.Database
+                    .GetPendingMigrationsAsync())
+                    .ToArray();
+
+                if (migrations.Any())
+                {
+                    ctx.Spinner(Spinner.Known.BouncingBar);
+                    AnsiConsole.MarkupLine($"{migrations.Length} migrations [orange3]pending[/]. Updating now");
+                    
             
-            Thread.Sleep(TimeSpan.FromMinutes(1));
-            Environment.Exit(10324);
+                    var path = PathBuilder.File("storage", "backups", $"{new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()}.zip");
+
+                    ctx.Status("Started backup creation");
+                    ctx.Refresh();
+                    AnsiConsole.MarkupLine($"This backup will be [green]saved[/] to '{path}'");
+
+                    var stopWatch = new Stopwatch();
+                    stopWatch.Start();
+        
+                    var cachePath = PathBuilder.Dir("storage", "backups", "cache");
+
+                    Directory.CreateDirectory(cachePath);
+
+                    //
+                    // Exporting database
+                    //
+        
+                    ctx.Status("Exporting database");
+
+                    var configService = new ConfigService(new());
+                    var dataContext = new DataContext(configService);
+
+                    await using MySqlConnection conn = new MySqlConnection(dataContext.Database.GetConnectionString());
+                    await using MySqlCommand cmd = new MySqlCommand();
+                    using MySqlBackup mb = new MySqlBackup(cmd);
+        
+                    cmd.Connection = conn;
+                    await conn.OpenAsync();
+                    mb.ExportToFile(PathBuilder.File(cachePath, "database.sql"));
+                    await conn.CloseAsync();
+        
+                    //
+                    // Saving config
+                    //
+
+                    ctx.Status("Saving configuration");
+                    
+                    File.Copy(
+                        PathBuilder.File("storage", "configs", "config.json"), 
+                        PathBuilder.File(cachePath, "config.json"));
+        
+                    //
+                    // Compressing the backup to a single file
+                    //
+        
+                    ctx.Status("Compressing");
+                    ZipFile.CreateFromDirectory(cachePath, 
+                        path, 
+                        CompressionLevel.Fastest, 
+                        false);
+        
+                    Directory.Delete(cachePath, true);
+        
+                    stopWatch.Stop();
+                    AnsiConsole.MarkupLine($"Backup [green]successfully[/] created. Took {stopWatch.Elapsed.TotalSeconds} seconds");
+            
+                    ctx.Status("[green]Applying[/] migrations");
+                    ctx.Refresh();
+            
+                    await context.Database.MigrateAsync();
+            
+                    ctx.Status("Finishing up");
+                    ctx.Refresh();
+                    AnsiConsole.MarkupLine("Successfully applied migrations");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("Database is up-to-date. No migrations have been performed");
+                }
+            });
+    }
+
+    private void AppExit()
+    {
+        AnsiConsole.MarkupLine("[red]Unable[/] to connect to mysql database");
+            
+        Thread.Sleep(TimeSpan.FromMinutes(1));
+        Environment.Exit(10324);
+    }
+    
+    private async Task<PingReply?> PingIp(string ip)
+    {
+        AnsiConsole.MarkupLine($"Pinging [gray]{ip}[/]");
+        try
+        {
+            var reply = new Ping().Send(ip);
+
+            if (reply.Status != IPStatus.Success)
+            {
+                AnsiConsole.MarkupLine($"Ping to [gray]{ip}[/] [red]failed.[/] [blue]Status: {reply.Status}[/]");
+                return reply;
+            }
+            AnsiConsole.MarkupLine($"Ping to [gray]{ip}[/] [green]succeeded[/]. [blue]Ping: {reply.RoundtripTime}ms[/]");
+            return reply;
         }
-
-        Logger.Info("Checking for pending migrations");
-
-        var migrations = (await context.Database
-            .GetPendingMigrationsAsync())
-            .ToArray();
-
-        if (migrations.Any())
+        catch (PingException ex)
         {
-            Logger.Info($"{migrations.Length} migrations pending. Updating now");
-            
-            await CreateBackup(PathBuilder.File("storage", "backups", $"{new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds()}.zip"));
-            
-            Logger.Info("Applying migrations");
-            
-            await context.Database.MigrateAsync();
-            
-            Logger.Info("Successfully applied migrations");
-        }
-        else
-        {
-            Logger.Info("Database is up-to-date. No migrations have been performed");
+            AnsiConsole.MarkupLine($"An Unexpected Error has occurred. While pinning: [gray]{ip}[/]");
+            await Task.Delay(TimeSpan.FromMinutes(1));
+            throw;
         }
     }
 
-    public async Task CreateBackup(string path)
+    private async Task CreateBackup(string path)
     {
-        Logger.Info("Started moonlight backup creation");
-        Logger.Info($"This backup will be saved to '{path}'");
-
-        var stopWatch = new Stopwatch();
-        stopWatch.Start();
         
-        var cachePath = PathBuilder.Dir("storage", "backups", "cache");
-
-        Directory.CreateDirectory(cachePath);
-
-        //
-        // Exporting database
-        //
-        
-        Logger.Info("Exporting database");
-
-        var configService = new ConfigService(new());
-        var dataContext = new DataContext(configService);
-
-        await using MySqlConnection conn = new MySqlConnection(dataContext.Database.GetConnectionString());
-        await using MySqlCommand cmd = new MySqlCommand();
-        using MySqlBackup mb = new MySqlBackup(cmd);
-        
-        cmd.Connection = conn;
-        await conn.OpenAsync();
-        mb.ExportToFile(PathBuilder.File(cachePath, "database.sql"));
-        await conn.CloseAsync();
-        
-        //
-        // Saving config
-        //
-        
-        Logger.Info("Saving configuration");
-        File.Copy(
-            PathBuilder.File("storage", "configs", "config.json"), 
-            PathBuilder.File(cachePath, "config.json"));
-        
-        //
-        // Saving all storage items needed to restore the panel
-        //
-        
-        Logger.Info("Saving resources");
-        CopyDirectory(
-            PathBuilder.Dir("storage", "resources"), 
-            PathBuilder.Dir(cachePath, "resources"));
-
-        Logger.Info("Saving logs");
-        CopyDirectory(
-            PathBuilder.Dir("storage", "logs"), 
-            PathBuilder.Dir(cachePath, "logs"));
-
-        Logger.Info("Saving uploads");
-        CopyDirectory(
-            PathBuilder.Dir("storage", "uploads"), 
-            PathBuilder.Dir(cachePath, "uploads"));
-        
-        //
-        // Compressing the backup to a single file
-        //
-        
-        Logger.Info("Compressing");
-        ZipFile.CreateFromDirectory(cachePath, 
-            path, 
-            CompressionLevel.Fastest, 
-            false);
-        
-        Directory.Delete(cachePath, true);
-        
-        stopWatch.Stop();
-        Logger.Info($"Backup successfully created. Took {stopWatch.Elapsed.TotalSeconds} seconds");
     }
     
     private void CopyDirectory(string sourceDirName, string destDirName, bool copySubDirs = true)
